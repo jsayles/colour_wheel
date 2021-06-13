@@ -5,6 +5,9 @@ import board
 import neopixel
 from digitalio import DigitalInOut, Direction, Pull
 
+from adafruit_circuitplayground import cp
+
+
 
 class LEDButton:
     _cycles_until_dark = 60
