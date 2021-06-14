@@ -2,11 +2,11 @@ import gc
 import time
 
 import board
+import busio
+import digitalio
+import adafruit_lis3dh
 import neopixel
 from digitalio import DigitalInOut, Direction, Pull
-
-from adafruit_circuitplayground import cp
-
 
 
 class LEDButton:
@@ -79,12 +79,14 @@ class State:
         self.inner_ring = LEDRing(board.NEOPIXEL, 10, 0.25)
         self.outer_ring = LEDRing(board.A1, 60, 1.0)
 
-        #self.r_button = LEDButton(board.A2, board.A3)
-        #self.g_button = LEDButton(board.A4, board.A5)
-        #self.b_button = LEDButton(board.A6, board.A7)
-        self.r_button = LEDButton(board.D9, board.D10)
-        self.g_button = LEDButton(board.D3, board.D2)
-        self.b_button = LEDButton(board.D0, board.D1)
+        self.r_button = LEDButton(board.D9, board.D10) #A2 and A3
+        self.g_button = LEDButton(board.D3, board.D2)  #A5 and A5
+        self.b_button = LEDButton(board.D0, board.D1)  #A6 and A7
+
+        self._i2c = busio.I2C(board.ACCELEROMETER_SCL, board.ACCELEROMETER_SDA)
+        self._int1 = digitalio.DigitalInOut(board.ACCELEROMETER_INTERRUPT)
+        self._lis3dh = adafruit_lis3dh.LIS3DH_I2C(self._i2c, address=0x19, int1=self._int1)
+        self._lis3dh.range = adafruit_lis3dh.RANGE_8_G
 
         # Start with our button LEDs off
         self.button_leds_off()
@@ -114,6 +116,11 @@ class State:
         self.g_button.update()
         self.b_button.update()
 
+    def reset_button_timers(self):
+        self.r_button.cycles_since_update = 0
+        self.g_button.cycles_since_update = 0
+        self.b_button.cycles_since_update = 0
+
     def buttons_are_inactive(self):
         if self.r_button.inactive and self.g_button.inactive and self.b_button.inactive:
             return True
@@ -136,6 +143,9 @@ class State:
         b = 255 if self.b_button.pressed else 0
         return (r, g, b)
 
+    def shake(self, shake_threshold=30):
+        return self._lis3dh.shake(shake_threshold=shake_threshold)
+
     def __repr__(self):
         return "<Color: {}>".format(self.get_colour())
 
@@ -147,3 +157,7 @@ while True:
     colour = state.get_colour()
     state.inner_ring.go_colour(colour)
     state.outer_ring.go_colour(colour)
+
+    if state.shake(shake_threshold=20):
+        print("Shake detected!")
+        state.reset_button_timers()
