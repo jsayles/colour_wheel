@@ -1,4 +1,5 @@
 # colour_wheel
+A Colour Wheel Toy for Baby Blue
 
 ## Overview
 - CircuitPython 6.3
